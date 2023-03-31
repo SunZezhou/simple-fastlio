@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(simple_lio)
+project(simple_fastlio)
 
-set(CMAKE_BUILD_TYPE "Release")
+# set(CMAKE_BUILD_TYPE "Release")
 
-set( CMAKE_CXX_FLAGS "-std=c++14 -O3" )
+set( CMAKE_CXX_FLAGS "-std=c++14 " )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fexceptions -Wno-unused-local-typedefs")
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -fexceptions -Wno-unused-local-typedefs")
 
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
-  livox_ros_driver
+  livox_ros_driver2
 )
 
 find_package(PCL REQUIRED)
@@ -34,9 +34,14 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/third_party/spdlog/include
 )
 
+catkin_package(
+  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs
+  DEPENDS EIGEN3 PCL
+  INCLUDE_DIRS
+)
 
-add_executable(custom_msg_to_sensor_msg src/custom_msg_to_sensor_msg.cpp)
-target_link_libraries(custom_msg_to_sensor_msg
+add_executable(livox_msg src/custom_msg_to_sensor_msg.cpp)
+target_link_libraries(livox_msg
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )

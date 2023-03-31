@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     std::queue<sensor_msgs::ImuConstPtr> imu_queue;
     std::queue<sensor_msgs::PointCloud2ConstPtr> cloud_queue;
 
-    ros::Subscriber imu_sub = nh.subscribe<sensor_msgs::Imu>("/imu0", 100, [&](const sensor_msgs::ImuConstPtr & msg)
+    ros::Subscriber imu_sub = nh.subscribe<sensor_msgs::Imu>("/livox/imu", 100, [&](const sensor_msgs::ImuConstPtr & msg)
     {   
         imu_queue.push(msg);
 
@@ -34,7 +34,8 @@ int main(int argc, char** argv)
             && imu_queue.front()->header.stamp.toSec() > pcl_end_time) // imu时刻比当前帧点云晚，则丢弃该帧点云
         {
             cloud_queue.pop();
-            pcl_msg = cloud_¸queue.front();
+            if(cloud_queue.empty()) return;
+            pcl_msg = cloud_queue.front();
             pcl_beg_time = pcl_msg->header.stamp.toSec();
             pcl_end_time = pcl_msg->header.stamp.toSec() + 0.1;
         }
@@ -50,7 +51,7 @@ int main(int argc, char** argv)
             while(imu_time <= pcl_end_time)
             {   
                 imu_queue.pop();
-
+                if(imu_queue.empty()) return;
                 if(imu_time < pcl_beg_time){
                     imu_msg = imu_queue.front();
                     imu_time = imu_msg->header.stamp.toSec();
@@ -101,11 +102,11 @@ int main(int argc, char** argv)
 
     model_param.R = 0.0025;
 
-    model_param.init_t_l_i(-0.09565903, -0.03466711, 0.0407548);
+    model_param.init_t_l_i(0.011, 0.02329, -0.04412);
     M3D R_L_I;
-    R_L_I << 0.99921203,  0.03962574, -0.00226486,
-             0.03961853, -0.99920993, -0.00314573,
-            -0.00238773,  0.00305353, -0.99999249;
+    R_L_I << 1, 0, 0,
+             0, 1, 0,
+             0, 0, 1;
     model_param.init_r_l_i(R_L_I);
     IMUProcess imu_process(model_param, nh);
 

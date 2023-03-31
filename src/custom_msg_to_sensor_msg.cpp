@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2021  WHU-EIS
  *
  */
-#include <livox_ros_driver/CustomMsg.h>
+#include <livox_ros_driver2/CustomMsg.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <ros/ros.h>
@@ -17,7 +17,7 @@
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 
-// 先将livox_ros_driver::CustomMs转换为pcl::PCLPointCloud2，再转换为sensor_msgs::PointCloud2
+// 先将livox_ros_driver2::CustomMs转换为pcl::PCLPointCloud2，再转换为sensor_msgs::PointCloud2
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "CustomMsg2SensorMsg");
@@ -28,10 +28,10 @@ int main(int argc, char** argv) {
       "/livox/lidar/sensor_pointcloud2", 10);
 
   uint8_t TO_MERGE_CNT = 1;
-  std::vector<livox_ros_driver::CustomMsgConstPtr>
+  std::vector<livox_ros_driver2::CustomMsgConstPtr>
       livox_datas;  // 消息缓存，到达一定数量时合并成一个PCL消息
-  ros::Subscriber custom_msgs_sub = nh.subscribe<livox_ros_driver::CustomMsg>(
-      "/livox/lidar", 10, [&](const livox_ros_driver::CustomMsgConstPtr& msgs) {
+  ros::Subscriber custom_msgs_sub = nh.subscribe<livox_ros_driver2::CustomMsg>(
+      "/livox/lidar", 10, [&](const livox_ros_driver2::CustomMsgConstPtr& msgs) {
         livox_datas.push_back(msgs);
 
         if (livox_datas.size() < TO_MERGE_CNT)  // 取<TO_MERGE_CNT>帧进行处理
