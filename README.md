@@ -1,4 +1,6 @@
-# Simple-LIO
+# Simple-FastLIO
+
+fork from https://gitee.com/ghowoght/simple_lio
 
 ## Done
 
@@ -20,7 +22,7 @@
 
 ## Result
 
-| ![simple-lio](./img/simple-lio.png) | ![fast-lio](./img/fast-lio.png) |
+| ![Simple-FastLIO](./img/simple-lio.png) | ![fast-lio](./img/fast-lio.png) |
 | :---------------------------------: | :-----------------------------: |
 |                this                 |            fast-lio             |
 
@@ -29,13 +31,13 @@
 下载
 
 ```bash
-git clone https://gitee.com/ghowoght/simple_lio
+git clone https://github.com/SunZezhou/simple-fastlio.git
 ```
 
 更新依赖
 
 ```bash
-cd simple_lio
+cd simple-fastlio
 git submodule update --init --recursive
 ```
 
