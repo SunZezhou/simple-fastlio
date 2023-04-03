@@ -54,7 +54,9 @@ public:
         double theta = (R.trace() > 3 - 1e-6) ? 0 : acos((R.trace() - 1) / 2);
         Eigen::Vector3d r(R(2,1) - R(1,2), R(0,2) - R(2,0), R(1,0) - R(0,1));
         return fabs(theta) < 0.001 ? (0.5 * r) : (0.5 * theta / sin(theta) * r);
-    }   
+    }
+
+    // 左乘BCH近似雅克比矩阵的A阵
     static Eigen::Matrix3d J_l(const Eigen::Vector3d& r){
         Eigen::Matrix3d A;
         double theta = r.norm();
@@ -69,6 +71,7 @@ public:
         
         return A;
     }
+
     static Eigen::Matrix3d J_l_inv(const Eigen::Vector3d& r){
         Eigen::Matrix3d A_inv;
         double theta = r.norm();
@@ -83,7 +86,6 @@ public:
             A_inv = Eigen::Matrix3d::Identity();
         return A_inv;
     }
-
 };
 
 #endif // SO3_MATH_HPP

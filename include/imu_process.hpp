@@ -261,13 +261,13 @@ private:
 
             //////////////// 噪声传播 ////////////////
             auto I_33 = Eigen::Matrix3d::Identity();
-            // 计算状态转移矩阵Φ
+            // 计算状态转移矩阵Φ  ->  Fx
             Eigen::Matrix<double, N, N> PHImat = Eigen::Matrix<double, N, N>::Identity();
 
-            // p
+            // position
             PHImat.block<3, 3>(0,  3) = I_33 * dt;  
-            // v
-            PHImat.block<3, 3>(3,  6) = -SO3Math::get_skew_symmetric(state_curr.rot * imu.accel_mpss) * dt; 
+            // v  theta_v in Fx
+            PHImat.block<3, 3>(3,  6) = -SO3Math::get_skew_symmetric(state_curr.rot * imu.accel_mpss) * dt;
             PHImat.block<3, 3>(3, 12) = -state_curr.rot.toRotationMatrix() * dt;
             PHImat.block<3, 3>(3, 15) = I_33 * dt;
             // phi
@@ -286,6 +286,7 @@ private:
             for(int i = 0; i < 4; i++){
                 qmat.block<3, 3>(3 * i,  3 * i) = item[i] * M3D::Identity();
             }
+            // Fw
             Gmat_ = Eigen::Matrix<double, N, 12>::Zero();
             // Gmat_.block<3, 3>( 3, 0) = -state_curr.rot.toRotationMatrix() * dt;
             // Gmat_.block<3, 3>( 6, 3) = -SO3Math::J_l(imu.gyro_rps * dt).transpose() * dt;
@@ -306,7 +307,7 @@ private:
 
         StateEKF state_curr = state_queue_.back();
         state_curr.pos = V3D(0, 0, 0);
-        state_curr.vel = state_curr.rot.conjugate() * state_curr.vel;   // 变换到I系
+        state_curr.vel = state_curr.rot.conjugate() * state_curr.vel;   // 变换到I系  R(-theta) 共轭矩阵
         state_curr.grav = state_curr.rot.conjugate() * state_curr.grav; // 变换到I系
         state_curr.rot = QD::Identity();
         state_curr.time = measure.imu_queue.back().time; // measure.pcl_end_time;
@@ -368,7 +369,7 @@ private:
 
                 V3D p_l_i((*pcl_in)[i].x, (*pcl_in)[i].y, (*pcl_in)[i].z);
                 V3D p_b_i = model_param_.R_L_I * p_l_i + model_param_.T_L_I; // 转换到惯导坐标系下
-                V3D p_b_end = state_curr.rot * p_b_i + state_curr.pos;      // 转换到扫描结束时刻的惯导坐标系下
+                V3D p_b_end = state_curr.rot * p_b_i + state_curr.pos;       // 转换到扫描结束时刻的惯导坐标系下
                 
                 p_to_add.x = p_b_end.x();
                 p_to_add.y = p_b_end.y();
@@ -378,7 +379,7 @@ private:
             else if(idx + 1 >= state_bp_queue_.size()){
                 V3D p_l_i((*pcl_in)[i].x, (*pcl_in)[i].y, (*pcl_in)[i].z);
                 V3D p_b_i = model_param_.R_L_I * p_l_i + model_param_.T_L_I; // 转换到惯导坐标系下
-                V3D p_b_end = state_last_.rot * p_b_i + state_last_.pos;      // 转换到扫描结束时刻的惯导坐标系下
+                V3D p_b_end = state_last_.rot * p_b_i + state_last_.pos;     // 转换到扫描结束时刻的惯导坐标系下
                 
                 p_to_add.x = p_b_end.x();
                 p_to_add.y = p_b_end.y();
@@ -470,7 +471,7 @@ private:
                 if(is_plane){
                     // 计算点到平面的距离
                     double res = abcd(0) * wp.x() + abcd(1) * wp.y() + abcd(2) * wp.z() + abcd(3);
-                    // 判断是否为有效特征点
+                    // 判断是否为有效特征点  9 * fabs(res) < sqrt(cp.norm())
                     double s = 1 - 0.9 * fabs(res) / sqrt(cp.norm());
                     if(s > 0.9)
                         effect_feature_queue.push_back(EffectFeature{cp, normvec, res});
@@ -491,6 +492,7 @@ private:
 
             double R = model_param_.R; // 观测噪声协方差
 
+            // δxk
             delta_x_.block<3, 1>( 0, 0) = state_curr_iter.pos - state_iter_0.pos;
             delta_x_.block<3, 1>( 3, 0) = state_curr_iter.vel - state_iter_0.vel;
             delta_x_.block<3, 1>( 6, 0) = SO3Math::Log(state_iter_0.rot.toRotationMatrix().transpose() 
@@ -500,13 +502,14 @@ private:
             delta_x_.block<3, 1>(15, 0) = state_curr_iter.grav - state_iter_0.grav;
 
             auto dx_new = delta_x_;
-             
+            // 似乎是因为右乘雅克比矩阵自变量取负数或者转置即可得到左乘雅克比矩阵
             auto Amat = SO3Math::J_l(-delta_x_.block<3, 1>( 6, 0));
             Jmat_inv.block<3, 3>(6, 6) = Amat;//.transpose();
             Pmat = Jmat_inv * Pmat_ * Jmat_inv.transpose();
 
             // 卡尔曼增益
             Kmat_ = (Hmat_.transpose() * Hmat_ + (Pmat / R).inverse()).inverse() * Hmat_.transpose();
+            // 原始卡尔曼公式
             // Kmat_ = Pmat_ * Hmat_.transpose() * (Hmat_ * Pmat_ * Hmat_.transpose() + Rmat).inverse();
             // std::cout << "Kmat_: " << Kmat_ << std::endl;
 
@@ -539,7 +542,8 @@ private:
                 break;
         }
         state_last_ = state_curr_iter;
-        Pmat_ = (Eigen::Matrix<double, N, N>::Identity() - Kmat_ * Hmat_) * Pmat;        
+        Pmat_ = (Eigen::Matrix<double, N, N>::Identity() - Kmat_ * Hmat_) * Pmat; 
+        //  似乎没有ESKF的误差状态后续处理，即误差均值归0，协方差有微小变换   
     }
 
     void map_update(PointCloud::Ptr& features){
@@ -592,6 +596,8 @@ private:
     }
 
 public:
+    // 静止1000帧imu数据，其加速度角速度的平均值当作bg,ba的初值
+    // TODO: 改正初始化位姿
     bool init_imu(MeasureData& measure){
         static int cnt = 0;
         for(auto& imu : measure.imu_queue){
@@ -600,10 +606,10 @@ public:
             cnt++;
         }
         if(cnt > 1000){
-            state_last_.grav << 0, 0, -9.7936;
+            state_last_.grav << 0, 0, -9.81;        // Gravity const in GuangDong, China
             state_last_.bg /= (double)cnt;
             state_last_.ba /= (double)cnt;
-            state_last_.ba -= state_last_.grav;
+            state_last_.ba -= state_last_.grav;     // 为什么能直接减，是默认Z水平朝上吗？
             cnt = 0;
             return true;
         }
@@ -636,7 +642,7 @@ public:
             if(map_surf_cloud_->size() > 1000 && init_imu(measure)){
                 is_initialized_ = true;
                 state_last_.time = measure.imu_queue.back().time;
-                ikd_tree_->Build(map_surf_cloud_->points);
+                ikd_tree_->Build(map_surf_cloud_->points);  // 初始化期间的点云就不去畸变了
 
                 state_queue_.clear();
                 map_surf_cloud_->clear();

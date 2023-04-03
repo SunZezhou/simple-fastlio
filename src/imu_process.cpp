@@ -57,7 +57,7 @@ int main(int argc, char** argv)
                     imu_time = imu_msg->header.stamp.toSec();
                     continue;
                 }
-                
+                //  auto&& 右值引用
                 auto&& accel_mpss = imu_msg->linear_acceleration;
                 auto&& gyro_rps = imu_msg->angular_velocity;
                 ImuData imu;
